@@ -54,7 +54,7 @@ async def advance_convo(convo_data):
         manychat_id = convo_data.get("manychat_id")
 
         # Run AI thread
-        run_response = await openai_client.threads.runs.create_and_poll(
+        run_response = await openai_client.beta.threads.runs.create_and_poll(
             thread_id=thread_id,
             assistant_id=assistant_id
         )
