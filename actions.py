@@ -215,18 +215,28 @@ async def change_assistant(function_args, thread_id, manychat_id):
         }
         
         pathway = function_args["scenario"]
-        assistant_name = assistant_map.get(pathway)
+        assistant_id = assistant_map.get(pathway)
     
-        if assistant_name:
+        if assistant_id:
             response = await mc_api.set_custom_field(
                 manychat_id,
                 "assistant_id",
-                assistant_name
+                assistant_id
             )
             if response:
-                await log("info", f"Switch to {assistant_name} -- {manychat_id}", manychat_id=manychat_id)
+                await log("info", f"Switch to {assistant_id} -- {manychat_id}", manychat_id=manychat_id)
+                
+                # Run the thread again with the new assistant
+                await advance_convo({
+                    "thread_id": thread_id,
+                    "assistant_id": assistant_id,
+                    "bot_filter_tag": "auto message active",
+                    "manychat_id": manychat_id
+                })
+
     except Exception as e:
         await log("error", f"Error changing asst --- {manychat_id}", error=str(e), traceback=traceback.format_exc(), manychat_id=manychat_id)
+
 
 
 
