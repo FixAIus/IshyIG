@@ -32,7 +32,7 @@ async def generate_response(request: Request, background_tasks: BackgroundTasks)
         # Add background task to advance the conversation
         background_tasks.add_task(advance_convo, validated_fields)
 
-        log("info", f"Request received -- {validated_fields.get('manychat_id', 'unknown')}", data=validated_fields)
+        await log("info", f"Request received -- {validated_fields.get('manychat_id', 'unknown')}", data=validated_fields)
         return {"status": "success"}
     except Exception as e:
         await log("error", f"generate_response -- Unexpected error --- {validated_fields.get('manychat_id', 'unknown')}", error=str(e), traceback=traceback.format_exc(), manychat_id=validated_fields.get("manychat_id", "unknown"))
