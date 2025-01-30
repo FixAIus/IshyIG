@@ -60,19 +60,19 @@ class ManychatAPI:
         }, function_name="send_message", subscriber_id=subscriber_id)
     
     async def add_tag(self, subscriber_id, tag_name):
-        return await self._request("POST", "/tag/addTagByName", data={
+        return await self._request("POST", "/subscriber/addTagByName", data={
             "subscriber_id": subscriber_id,
             "tag_name": tag_name
         }, function_name="add_tag", subscriber_id=subscriber_id)
     
     async def remove_tag(self, subscriber_id, tag_name):
-        return await self._request("POST", "/tag/removeTagByName", data={
+        return await self._request("POST", "/subscriber/removeTagByName", data={
             "subscriber_id": subscriber_id,
             "tag_name": tag_name
         }, function_name="remove_tag", subscriber_id=subscriber_id)
     
     async def set_custom_field(self, subscriber_id, field_name, field_value):
-        return await self._request("POST", "/custom_field/setCustomFieldByName", data={
+        return await self._request("POST", "/subscriber/setCustomFieldByName", data={
             "subscriber_id": subscriber_id,
             "field_name": field_name,
             "field_value": field_value
