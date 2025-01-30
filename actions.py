@@ -181,7 +181,7 @@ async def process_function_response(run_response, thread_id, manychat_id):
         )
         ###
         ###
-        await log("info", f"Tool outputs submitted --- {manychat_id}", response=submit_response, manychat_id=manychat_id)
+        await log("info", f"Tool outputs submitted --- {manychat_id}", response=str(submit_response), manychat_id=manychat_id)
 
         if "scenario" in function_args:
             await change_assistant(function_args, thread_id, manychat_id)
