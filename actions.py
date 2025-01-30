@@ -174,15 +174,27 @@ async def process_function_response(run_response, thread_id, manychat_id):
         tool_call = run_response.required_action.submit_tool_outputs.tool_calls[0]
         function_args = json.loads(tool_call.function.arguments)
 
-        submit_response = await openai_client.beta.threads.runs.submit_tool_outputs(
+        # Submit tool outputs and wait for confirmation
+        await openai_client.beta.threads.runs.submit_tool_outputs(
             thread_id=thread_id,
             run_id=run_id,
             tool_outputs=[{"tool_call_id": tool_call.id, "output": "success"}]
         )
-        ###
-        ###
-        await log("info", f"Tool outputs submitted --- {manychat_id}", response=str(submit_response), manychat_id=manychat_id)
 
+        # Wait for the function run to complete
+        max_checks = 15
+        for attempt in range(max_checks):
+            await asyncio.sleep(1)  # Wait 1 second before checking status
+
+            run_status = await openai_client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run_id)
+
+            if run_status.status == "completed":
+                break  # Exit loop once the function completes
+        else:
+            await log("error", f"Function did not complete after {max_checks} attempts --- {manychat_id}", manychat_id=manychat_id)
+            return
+
+        # Proceed only if tool output submission was successful
         if "scenario" in function_args:
             await change_assistant(function_args, thread_id, manychat_id)
         
