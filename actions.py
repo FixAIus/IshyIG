@@ -207,22 +207,27 @@ async def process_function_response(run_response, thread_id, manychat_id):
 # Actions
 #
 async def change_assistant(function_args, thread_id, manychat_id):
-    assistant_map = {
-        "Italian": os.getenv("Italian_ASST"),
-        "ecommerce": os.getenv("ecommerce_ASST"),
-        "mainMenu": os.getenv("mainMenu_ASST")
-    }
+    try:
+        assistant_map = {
+            "Italian": os.getenv("Italian_ASST"),
+            "ecommerce": os.getenv("ecommerce_ASST"),
+            "mainMenu": os.getenv("mainMenu_ASST")
+        }
+        
+        pathway = function_args["scenario"]
+        assistant_name = assistant_map.get(pathway)
     
-    pathway = function_args["scenario"]
-    assistant_name = assistant_map.get(pathway)
+        if assistant_name:
+            response = await mc_api.set_custom_field(
+                manychat_id,
+                "assistant_id",
+                assistant_name
+            )
+            if response:
+                await log("info", f"Switch to {assistant_name} -- {manychat_id}", manychat_id=manychat_id)
+    except Exception as e:
+        await log("error", f"Error changing asst --- {manychat_id}", error=str(e), traceback=traceback.format_exc(), manychat_id=manychat_id)
 
-    if assistant_name:
-        await mc_api.set_custom_field(
-            manychat_id,
-            "assistant_id",
-            assistant_name
-        )
-        await log("info", f"Switch to {assistant_name} -- {manychat_id}", manychat_id=manychat_id)
 
 
 
