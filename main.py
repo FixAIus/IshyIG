@@ -4,11 +4,19 @@ import os
 import traceback
 from openai import AsyncOpenAI
 import httpx
+from actions import (
+    end_bot,
+    change_assistant,
+    ManychatAPI
+)
 
 app = FastAPI()
 
 # Initialize OpenAI client
 openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Initialize ManyChat API client
+mc_api = ManychatAPI()
 
 @app.post("/generateResponse")
 async def generate_response(request: Request, background_tasks: BackgroundTasks):
@@ -26,8 +34,16 @@ async def generate_response(request: Request, background_tasks: BackgroundTasks)
 
         return {"status": "success"}
     except Exception as e:
-        await log("error", "generate_response -- Unexpected error", error=str(e), traceback=traceback.format_exc())
+        await log("error", f"generate_response -- Unexpected error --- {validated_fields.get('manychat_id', 'unknown')}", error=str(e), traceback=traceback.format_exc(), manychat_id=validated_fields.get("manychat_id", "unknown"))
         return {"status": "error"}
+
+
+
+
+
+
+
+### Main endpoint functionality
 
 async def validate_request_data(data):
     """Validate request data for required fields."""
@@ -45,6 +61,8 @@ async def validate_request_data(data):
         await log("error", "Validation error", error=str(e), traceback=traceback.format_exc())
         return None
 
+
+
 async def advance_convo(convo_data):
     """Background task to handle conversation advancement."""
     try:
@@ -60,14 +78,15 @@ async def advance_convo(convo_data):
         )
 
         if not run_response:
-            await handle_bot_failure("Bot failure", bot_filter_tag)
-            return
+            raise Exception("Run failed")
 
         # Process the AI response
         await process_run_response(run_response, thread_id, bot_filter_tag, manychat_id)
 
     except Exception as e:
-        await log("error", "advance_convo -- Unexpected error", error=str(e), traceback=traceback.format_exc())
+        await log("error", f"advance_convo -- Unexpected error --- {manychat_id}", error=str(e), traceback=traceback.format_exc(), manychat_id=manychat_id)
+
+
 
 async def process_run_response(run_response, thread_id, bot_filter_tag, manychat_id):
     """Process the AI thread response."""
@@ -75,71 +94,68 @@ async def process_run_response(run_response, thread_id, bot_filter_tag, manychat
         run_status = run_response.status
 
         if run_status == "completed":
-            await send_response_to_manychat(run_response, thread_id, manychat_id)
+            await process_message_response(run_response, thread_id, manychat_id)
         elif run_status == "requires_action":
-            await handle_action_required(run_response)
+            await process_function_response(run_response, thread_id, manychat_id)
         else:
-            await log("error", "Run thread failed", response=run_response)
+            await log("error", f"Run thread failed --- {manychat_id}", response=run_response, manychat_id=manychat_id)
 
     except Exception as e:
-        await log("error", "process_run_response -- Unexpected error", error=str(e), traceback=traceback.format_exc())
+        await log("error", f"process_run_response -- Unexpected error --- {manychat_id}", error=str(e), traceback=traceback.format_exc(), manychat_id=manychat_id)
 
-async def send_response_to_manychat(run_response, thread_id, manychat_id):
-    """Send AI response to ManyChat."""
+
+
+async def process_message_response(run_response, thread_id, manychat_id):
+    """Process AI response messages."""
     try:
         run_id = run_response.id
         ai_messages = await openai_client.beta.threads.messages.list(thread_id=thread_id, run_id=run_id)
         ai_messages = ai_messages.data
 
         if not ai_messages:
-            await log("error", "No messages found in run response.")
-            return
+            await log("error", f"No messages found in run response --- {manychat_id}", manychat_id=manychat_id)
+            return None
 
         # Extract the content of the last message
         ai_content = ai_messages[-1].content[0].text.value
         if "【" in ai_content and "】" in ai_content:
             ai_content = ai_content[:ai_content.find("【")] + ai_content[ai_content.find("】") + 1:]
 
-        # Format the payload for ManyChat
-        payload = {
-            "subscriber_id": manychat_id,
-            "data": {
-                "version": "v2",
-                "content": {
-                    "type": "instagram",
-                    "messages": [
-                        {
-                            "type": "text",
-                            "text": ai_content
-                        }
-                    ]
-                }
-            },
-            "message_tag": "ACCOUNT_UPDATE"
-        }
+        # Send AI message to ManyChat
+        await mc_api.send_message(manychat_id, ai_content)
+        return None
+    
+    except Exception as e:
+        await log("error", f"Error processing AI message response --- {manychat_id}", error=str(e), traceback=traceback.format_exc(), manychat_id=manychat_id)
 
-        # Send the message to ManyChat API
-        api_key = os.getenv("MANYCHAT_API_KEY")
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        async with httpx.AsyncClient() as client:
-            response = await client.post("https://api.manychat.com/fb/sending/sendContent", json=payload, headers=headers)
 
-        if response.status_code != 200:
-            await log("error", "Failed to send message to ManyChat", status_code=response.status_code, response_text=response.text)
+
+async def process_function_response(run_response, thread_id, manychat_id):
+    """Process required action responses from AI."""
+    try:
+        run_id = run_response.id
+        tool_call = run_response.required_action.submit_tool_outputs.tool_calls[0]
+        function_args = json.loads(tool_call.function.arguments)
+
+        await openai_client.beta.threads.runs.submit_tool_outputs(
+            thread_id=thread_id,
+            run_id=run_id,
+            tool_outputs=[{"tool_call_id": tool_call.id, "output": "success"}]
+        )
+
+        if "change_assistant" in function_args:
+            await change_assistant(function_args, thread_id, manychat_id)
+        
+        elif "end_bot" in function_args:
+            await end_bot(function_args, thread_id, manychat_id)
+            
+        else:
+            await log("error", f"Unknown function response --- {manychat_id}", function_args=function_args, manychat_id=manychat_id)
 
     except Exception as e:
-        await log("error", "Error sending message to ManyChat", error=str(e), traceback=traceback.format_exc())
+        await log("error", f"Error processing function response --- {manychat_id}", error=str(e), traceback=traceback.format_exc(), manychat_id=manychat_id)
 
-async def handle_bot_failure(reason, bot_filter_tag):
-    """Handle bot failure by logging and performing cleanup actions."""
-    await log("error", "Bot failure", reason=reason, bot_filter_tag=bot_filter_tag)
 
-async def handle_action_required(run_response):
-    """Handle scenarios where the run requires additional actions."""
-    await log("info", "Action required for run", response=run_response)
 
 async def log(level, msg, **kwargs):
     """Centralized logger for structured JSON logging."""
