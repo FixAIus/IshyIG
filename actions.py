@@ -97,19 +97,19 @@ async def end_bot(function_args, thread_id, manychat_id):
 async def change_assistant(function_args, thread_id, manychat_id):
     pathway = function_args["scenario"]
     if pathway == "Italian":
-        mc_api.set_custom_field(
+        await mc_api.set_custom_field(
             manychat_id,
             "assistant_id",
             os.getenv("Italian_ASST")
         )
     elif pathway == "ecommerce":
-        mc_api.set_custom_field(
+        await mc_api.set_custom_field(
             manychat_id,
             "assistant_id",
             os.getenv("ecommerce_ASST")
         )
     elif pathway == "mainMenu":
-        mc_api.set_custom_field(
+        await mc_api.set_custom_field(
             manychat_id,
             "assistant_id",
             os.getenv("mainMenu_ASST")
