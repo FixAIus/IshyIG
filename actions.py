@@ -4,50 +4,6 @@ import json
 import traceback
 
 
-
-### Action functions
-
-mc_api = ManychatAPI()
-
-async def end_bot(function_args, thread_id, manychat_id):
-    """End bot by updating ManyChat tags."""
-    try:
-        await mc_api.remove_tag(manychat_id, "auto message active")
-        await mc_api.add_tag(manychat_id, "disable auto message")
-    except Exception as e:
-        await log("error", f"Error ending bot --- {manychat_id}", error=str(e), traceback=traceback.format_exc(), manychat_id=manychat_id)
-
-
-async def change_assistant(function_args, thread_id, manychat_id):
-    pathway = function_args["scenario"]
-    if pathway == "Italian":
-        mc_api.set_custom_field(
-            manychat_id,
-            "assistant_id",
-            os.getenv("Italian_ASST")
-        )
-    elif pathway == "ecommerce":
-        mc_api.set_custom_field(
-            manychat_id,
-            "assistant_id",
-            os.getenv("ecommerce_ASST")
-        )
-    elif pathway == "mainMenu":
-        mc_api.set_custom_field(
-            manychat_id,
-            "assistant_id",
-            os.getenv("mainMenu_ASST")
-        )
-
-
-
-
-
-
-
-
-
-
 ### Manychat class
 
 class ManychatAPI:
@@ -117,3 +73,50 @@ class ManychatAPI:
             "field_name": field_name,
             "field_value": field_value
         }, function_name="set_custom_field", subscriber_id=subscriber_id)
+
+
+
+
+
+
+
+
+### Action functions
+
+mc_api = ManychatAPI()
+
+async def end_bot(function_args, thread_id, manychat_id):
+    """End bot by updating ManyChat tags."""
+    try:
+        await mc_api.remove_tag(manychat_id, "auto message active")
+        await mc_api.add_tag(manychat_id, "disable auto message")
+    except Exception as e:
+        await log("error", f"Error ending bot --- {manychat_id}", error=str(e), traceback=traceback.format_exc(), manychat_id=manychat_id)
+
+
+async def change_assistant(function_args, thread_id, manychat_id):
+    pathway = function_args["scenario"]
+    if pathway == "Italian":
+        mc_api.set_custom_field(
+            manychat_id,
+            "assistant_id",
+            os.getenv("Italian_ASST")
+        )
+    elif pathway == "ecommerce":
+        mc_api.set_custom_field(
+            manychat_id,
+            "assistant_id",
+            os.getenv("ecommerce_ASST")
+        )
+    elif pathway == "mainMenu":
+        mc_api.set_custom_field(
+            manychat_id,
+            "assistant_id",
+            os.getenv("mainMenu_ASST")
+        )
+
+
+
+
+
+
