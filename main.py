@@ -1,6 +1,5 @@
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 import traceback
-from dependencies import openai_client, mc_api
 from actions import (
     openai_client,
     mc_api,
