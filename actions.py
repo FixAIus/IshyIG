@@ -83,53 +83,99 @@ async def validate_request_data(data):
 
 
 async def advance_convo(convo_data):
-    """Handles AI conversation advancement."""
+    """Background task to handle conversation advancement."""
     try:
+        thread_id = convo_data.get("thread_id")
+        assistant_id = convo_data.get("assistant_id")
+        bot_filter_tag = convo_data.get("bot_filter_tag")
+        manychat_id = convo_data.get("manychat_id")
+
+        # Run AI thread
         run_response = await openai_client.beta.threads.runs.create_and_poll(
-            thread_id=convo_data["thread_id"],
-            assistant_id=convo_data["assistant_id"]
+            thread_id=thread_id,
+            assistant_id=assistant_id
         )
 
         if not run_response:
             raise Exception("Run failed")
 
-        await process_run_response(run_response, convo_data)
+        # Process the AI response
+        await process_run_response(run_response, thread_id, bot_filter_tag, manychat_id)
 
     except Exception as e:
-        await log("error", "advance_convo - Unexpected error", error=str(e), traceback=traceback.format_exc())
+        await log("error", f"advance_convo -- Unexpected error --- {manychat_id}", error=str(e), traceback=traceback.format_exc(), manychat_id=manychat_id)
 
 
 
-async def process_run_response(run_response, convo_data):
-    """Processes AI-generated responses."""
-    run_status = run_response.status
-
-    if run_status == "completed":
-        await process_message_response(run_response, convo_data)
-    elif run_status == "requires_action":
-        await process_function_response(run_response, convo_data)
-    else:
-        await log("error", "Run thread failed", response=run_response)
-
-
-
-async def process_message_response(run_response, convo_data):
-    """Sends AI-generated messages to ManyChat."""
+async def process_run_response(run_response, thread_id, bot_filter_tag, manychat_id):
+    """Process the AI thread response."""
     try:
-        ai_messages = await openai_client.beta.threads.messages.list(
-            thread_id=convo_data["thread_id"], run_id=run_response.id
-        )
-        messages = ai_messages.data
+        run_status = run_response.status
 
-        if not messages:
-            await log("error", "No messages found in run response", convo_data=convo_data)
-            return
-
-        ai_content = messages[-1].content[0].text.value.split("【")[0]
-        await mc_api.send_message(convo_data["manychat_id"], ai_content)
+        if run_status == "completed":
+            await process_message_response(run_response, thread_id, manychat_id)
+        elif run_status == "requires_action":
+            await process_function_response(run_response, thread_id, manychat_id)
+        else:
+            await log("error", f"Run thread failed --- {manychat_id}", response=run_response, manychat_id=manychat_id)
 
     except Exception as e:
-        await log("error", "Error processing AI message response", error=str(e), traceback=traceback.format_exc())
+        await log("error", f"process_run_response -- Unexpected error --- {manychat_id}", error=str(e), traceback=traceback.format_exc(), manychat_id=manychat_id)
+
+
+
+async def process_message_response(run_response, thread_id, manychat_id):
+    """Process AI response messages."""
+    try:
+        run_id = run_response.id
+        ai_messages = await openai_client.beta.threads.messages.list(thread_id=thread_id, run_id=run_id)
+        ai_messages = ai_messages.data
+
+        if not ai_messages:
+            await log("error", f"No messages found in run response --- {manychat_id}", manychat_id=manychat_id)
+            return None
+
+        # Extract the content of the last message
+        ai_content = ai_messages[-1].content[0].text.value
+        if "【" in ai_content and "】" in ai_content:
+            ai_content = ai_content[:ai_content.find("【")] + ai_content[ai_content.find("】") + 1:]
+
+        # Send AI message to ManyChat
+        await mc_api.send_message(manychat_id, ai_content)
+        return None
+    
+    except Exception as e:
+        await log("error", f"Error processing AI message response --- {manychat_id}", error=str(e), traceback=traceback.format_exc(), manychat_id=manychat_id)
+
+async def process_function_response(run_response, thread_id, manychat_id):
+    """Process required action responses from AI."""
+    try:
+        run_id = run_response.id
+        tool_call = run_response.required_action.submit_tool_outputs.tool_calls[0]
+        function_args = json.loads(tool_call.function.arguments)
+
+        await openai_client.beta.threads.runs.submit_tool_outputs(
+            thread_id=thread_id,
+            run_id=run_id,
+            tool_outputs=[{"tool_call_id": tool_call.id, "output": "success"}]
+        )
+
+        if "scenario" in function_args:
+            await change_assistant(function_args, thread_id, manychat_id)
+        
+        elif "endDemo" in function_args:
+            await end_demo(function_args, thread_id, manychat_id)
+            
+        else:
+            await log("error", f"Unknown function response --- {manychat_id}", function_args=function_args, manychat_id=manychat_id)
+
+    except Exception as e:
+        await log("error", f"Error processing function response --- {manychat_id}", error=str(e), traceback=traceback.format_exc(), manychat_id=manychat_id)
+
+
+
+
+
 
 
 
@@ -140,22 +186,35 @@ async def process_message_response(run_response, convo_data):
 
 # Actions
 #
-async def change_assistant(function_args, convo_data):
-    """Updates the AI assistant scenario."""
+async def change_assistant(function_args, thread_id, manychat_id):
     assistant_map = {
         "Italian": os.getenv("Italian_ASST"),
         "ecommerce": os.getenv("ecommerce_ASST"),
         "mainMenu": os.getenv("mainMenu_ASST")
     }
-    new_assistant_id = assistant_map.get(function_args.get("scenario"))
-    if new_assistant_id:
-        await mc_api.set_custom_field(convo_data["manychat_id"], "assistant_id", new_assistant_id)
+    
+    pathway = function_args["scenario"]
+    assistant_name = assistant_map.get(pathway)
+
+    if assistant_name:
+        await mc_api.set_custom_field(
+            manychat_id,
+            "assistant_id",
+            assistant_name
+        )
+        await log("info", f"Switch to {assistant_name} -- {manychat_id}", manychat_id=manychat_id)
 
 
-async def end_bot(function_args, convo_data):
-    """Disables automated messages."""
-    await mc_api.remove_tag(convo_data["manychat_id"], "auto message active")
-    await mc_api.add_tag(convo_data["manychat_id"], "disable auto message")
+
+
+async def end_bot(function_args, thread_id, manychat_id):
+    """End bot by updating ManyChat tags."""
+    try:
+        await mc_api.remove_tag(manychat_id, "auto message active")
+        await mc_api.add_tag(manychat_id, "disable auto message")
+    except Exception as e:
+        await log("error", f"Error ending bot --- {manychat_id}", error=str(e), traceback=traceback.format_exc(), manychat_id=manychat_id)
+
 
 
 async def log(level, msg, **kwargs):
