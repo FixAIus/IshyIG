@@ -26,7 +26,7 @@ async def generate_response(request: Request, background_tasks: BackgroundTasks)
             raise HTTPException(status_code=400, detail="Invalid request data")
 
         background_tasks.add_task(advance_convo, validated_fields)
-        await log("info", "Request received", data=validated_fields)
+        await log("info", f"Request received --- {validated_fields['manychat_id']}", data=validated_fields)
 
         return {"status": "success"}
 
