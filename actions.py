@@ -17,7 +17,7 @@ async def end_bot(function_args, thread_id, manychat_id):
 
 
 async def change_assistant(function_args, thread_id, manychat_id):
-    pathway = function_args.scenario
+    pathway = function_args["scenario"]
     if pathway == "Italian":
         mc_api.set_custom_field(
             manychat_id,
