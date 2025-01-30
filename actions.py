@@ -2,6 +2,7 @@ import os
 import json
 import traceback
 import httpx
+import asyncio
 from openai import AsyncOpenAI
 
 
