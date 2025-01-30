@@ -7,6 +7,8 @@ import traceback
 
 ### Action functions
 
+mc_api = ManychatAPI()
+
 async def end_bot(function_args, thread_id, manychat_id):
     """End bot by updating ManyChat tags."""
     try:
