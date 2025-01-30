@@ -174,7 +174,7 @@ async def process_function_response(run_response, thread_id, manychat_id):
         tool_call = run_response.required_action.submit_tool_outputs.tool_calls[0]
         function_args = json.loads(tool_call.function.arguments)
 
-        response = await openai_client.beta.threads.runs.submit_tool_outputs(
+        submit_response = await openai_client.beta.threads.runs.submit_tool_outputs(
             thread_id=thread_id,
             run_id=run_id,
             tool_outputs=[{"tool_call_id": tool_call.id, "output": "success"}]
