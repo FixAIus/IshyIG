@@ -143,11 +143,11 @@ async def process_function_response(run_response, thread_id, manychat_id):
             tool_outputs=[{"tool_call_id": tool_call.id, "output": "success"}]
         )
 
-        if "change_assistant" in function_args:
+        if "scenario" in function_args:
             await change_assistant(function_args, thread_id, manychat_id)
         
-        elif "end_bot" in function_args:
-            await end_bot(function_args, thread_id, manychat_id)
+        elif "endDemo" in function_args:
+            await end_demo(function_args, thread_id, manychat_id)
             
         else:
             await log("error", f"Unknown function response --- {manychat_id}", function_args=function_args, manychat_id=manychat_id)
