@@ -111,9 +111,6 @@ async def advance_convo(convo_data):
         bot_filter_tag = convo_data.get("bot_filter_tag")
         manychat_id = convo_data.get("manychat_id")
 
-        # Clean the thread_id by removing any curly braces
-        thread_id = thread_id.strip().replace('{', '').replace('}', '')
-
         # Run AI thread
         run_response = await openai_client.beta.threads.runs.create_and_poll(
             thread_id=thread_id,
