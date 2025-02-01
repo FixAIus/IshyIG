@@ -230,6 +230,7 @@ async def change_assistant(function_args, thread_id, manychat_id):
             "GuidedWalkthrough": os.getenv("GuidedWalkthrough_ASST"),
             "ManualWalkthrough": os.getenv("ManualWalkthrough_ASST"),
             "HighTicket": os.getenv("HighTicket_ASST"),
+            "Enagic": os.getenv("Enagic_ASST"),
             "mainMenu": os.getenv("mainMenu_ASST")
         }
         
