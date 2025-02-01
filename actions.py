@@ -249,7 +249,7 @@ async def change_assistant(function_args, thread_id, manychat_id):
                 await advance_convo({
                     "thread_id": thread_id,
                     "assistant_id": assistant_id,
-                    "bot_filter_tag": "auto message active",
+                    "bot_filter_tag": "demo filter",
                     "manychat_id": manychat_id
                 })
 
@@ -264,7 +264,7 @@ async def change_assistant(function_args, thread_id, manychat_id):
 async def end_bot(function_args, thread_id, manychat_id):
     """End bot by updating ManyChat tags."""
     try:
-        await mc_api.remove_tag(manychat_id, "auto message active")
+        await mc_api.remove_tag(manychat_id, "demo filter")
         await mc_api.add_tag(manychat_id, "disable auto message")
     except Exception as e:
         await log("error", f"Error ending bot --- {manychat_id}", error=str(e), traceback=traceback.format_exc(), manychat_id=manychat_id)
