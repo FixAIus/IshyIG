@@ -185,7 +185,7 @@ async def process_function_response(run_response, thread_id, manychat_id):
         # Wait for the function run to complete
         max_checks = 15
         for attempt in range(max_checks):
-            await asyncio.sleep(1)  # Wait 1 second before checking status
+            await asyncio.sleep(2)  # Wait 2 second before checking status
 
             run_status = await openai_client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run_id)
 
