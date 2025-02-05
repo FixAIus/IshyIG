@@ -191,7 +191,7 @@ async def process_function_response(run_response, thread_id, manychat_id):
 
             run_status = await openai_client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run_id)
 
-            await log("info", f"Function status check {attempt + 1} --- {manychat_id}", response=run_status, manychat_id=manychat_id)
+            await log("info", f"Function status check {attempt + 1} --- {manychat_id}", response=str(run_status), manychat_id=manychat_id)
 
             if run_status.status == "completed":
                 break  # Exit loop once the function completes
