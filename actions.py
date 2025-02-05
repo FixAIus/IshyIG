@@ -168,6 +168,8 @@ async def process_message_response(run_response, thread_id, manychat_id):
     except Exception as e:
         await log("error", f"Error processing AI message response --- {manychat_id}", error=str(e), traceback=traceback.format_exc(), manychat_id=manychat_id)
 
+
+
 async def process_function_response(run_response, thread_id, manychat_id):
     """Process required action responses from AI."""
     try:
@@ -183,11 +185,13 @@ async def process_function_response(run_response, thread_id, manychat_id):
         )
 
         # Wait for the function run to complete
-        max_checks = 15
+        max_checks = 6
         for attempt in range(max_checks):
-            await asyncio.sleep(2)  # Wait 2 second before checking status
+            await asyncio.sleep(5)  # Wait 5 seconds before checking status
 
             run_status = await openai_client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run_id)
+
+            await log("info", f"Function status check {attempt + 1} --- {manychat_id}", response=run_status, manychat_id=manychat_id)
 
             if run_status.status == "completed":
                 break  # Exit loop once the function completes
