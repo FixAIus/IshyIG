@@ -203,7 +203,7 @@ async def process_function_response(run_response, thread_id, manychat_id):
         if "scenario" in function_args:
             await change_assistant(function_args, thread_id, manychat_id)
         
-        elif "endDemo" in function_args:
+        elif "endDemo" in function_args or "end_demo" in function_args:
             await end_demo(function_args, thread_id, manychat_id)
             
         else:
