@@ -13,6 +13,12 @@ openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 async def validate_request_data(data):
     """Validates incoming request data."""
+    # Check for invalid cuf_ fields
+    for field in data:
+        if 'cuf_' in field.lower():
+            await log("error", "Field cannot have cuf_", received_fields=data)
+            return None
+
     required_fields = ["thread_id", "assistant_id", "bot_filter_tag", "manychat_id"]
     fields = {field: data.get(field) for field in required_fields}
     missing_fields = [field for field in required_fields if not fields[field] or fields[field] in ["", "null", None]]
