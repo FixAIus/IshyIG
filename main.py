@@ -1,9 +1,8 @@
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 import traceback
+from utils import log
 from actions import (
     openai_client,
-    mc_api,
-    log,
     validate_request_data,
     advance_convo,
     process_run_response,
@@ -11,6 +10,8 @@ from actions import (
     change_assistant,
     end_bot
 )
+from ManychatAPI import mc_api
+
 
 app = FastAPI()
 
