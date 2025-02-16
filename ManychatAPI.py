@@ -94,6 +94,6 @@ class ManychatAPI:
 
 #
 # Initialize manychat api
-#mc_api = ManychatAPI(api_key=os.getenv("MANYCHAT_API_KEY"))
+mc_api = ManychatAPI(api_key=os.getenv("MANYCHAT_API_KEY"))
 #
 #
